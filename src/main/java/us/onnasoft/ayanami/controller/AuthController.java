@@ -67,16 +67,16 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
         Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
 
         if (userOptional.isEmpty() || !userOptional.get().isPasswordValid(request.getPassword())) {
             return ResponseEntity.status(401).body(
-                    new AuthResponse("Invalid email or password", null));
+                    new LoginResponse("Invalid email or password", null));
         }
 
         String token = jwtUtil.generateToken(userOptional.get().getEmail());
-        return ResponseEntity.ok(new AuthResponse("Login successful", token));
+        return ResponseEntity.ok(new LoginResponse("Login successful", token));
     }
 
     @PostMapping("/forgot-password")
