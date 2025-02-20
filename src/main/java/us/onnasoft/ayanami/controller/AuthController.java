@@ -1,6 +1,7 @@
 package us.onnasoft.ayanami.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
@@ -16,11 +17,16 @@ import us.onnasoft.ayanami.service.EmailService;
 import us.onnasoft.ayanami.service.UserService;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    @Value("${url_base}")
+    private String baseUrl;
 
     @Autowired
     private UserService userService;
@@ -35,9 +41,29 @@ public class AuthController {
     private EmailService emailService;
 
     @PostMapping("/register")
-    public ResponseEntity<User> register(@RequestBody UserDTO userDTO) {
-        User user = userService.createUser(userDTO);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest payload) {
+        final User user = userService.createUser(payload);
+        final String token = jwtUtil.generateToken(user.getEmail());
+        final String verificationLink = baseUrl + "/auth/verify-email?token=" + token;
+
+        Map<String, Object> model = new HashMap<>();
+        model.put("username", user.getUsername());
+        model.put("verificationLink", verificationLink);
+
+        emailService.sendTemplateEmail(
+                user.getEmail(),
+                "Email Verification",
+                "email-verification",
+                model);
+
+        final RegisterResponse response = new RegisterResponse();
+        response.setName(user.getName());
+        response.setEmail(user.getEmail());
+        response.setUsername(user.getUsername());
+        response.setRole(user.getRole());
+        response.setActive(user.getActive());
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/login")
@@ -61,7 +87,7 @@ public class AuthController {
         }
 
         String resetToken = jwtUtil.generateToken(userOptional.get().getEmail());
-        String resetLink = "http://localhost:8080/auth/reset-password?token=" + resetToken;
+        String resetLink = baseUrl + "/auth/reset-password?token=" + resetToken;
 
         System.out.println("Reset link: " + resetLink + " for email: " + request.getEmail());
         emailService.sendEmail(

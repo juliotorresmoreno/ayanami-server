@@ -4,7 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import us.onnasoft.ayanami.dto.UserDTO;
+
+import us.onnasoft.ayanami.dto.RegisterRequest;
 import us.onnasoft.ayanami.models.User;
 import us.onnasoft.ayanami.models.User.Role;
 import us.onnasoft.ayanami.repository.UserRepository;
@@ -29,13 +30,14 @@ public class UserService {
     }
 
     @Transactional
-    public User createUser(UserDTO userDTO) {
+    public User createUser(RegisterRequest userDTO) {
         if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
         User user = new User();
         user.setName(userDTO.getName());
+        user.setUsername(userDTO.getUsername());
         user.setEmail(userDTO.getEmail());
         user.setPassword(userDTO.getPassword());
         user.setRole(userDTO.getRole() != null ? userDTO.getRole() : Role.USER);
@@ -45,7 +47,7 @@ public class UserService {
     }
 
     @Transactional
-    public User updateUser(Long id, UserDTO userDTO) {
+    public User updateUser(Long id, RegisterRequest userDTO) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 

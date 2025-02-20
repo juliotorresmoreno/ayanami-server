@@ -2,7 +2,7 @@ package us.onnasoft.ayanami.controller;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import us.onnasoft.ayanami.dto.UserDTO;
+import us.onnasoft.ayanami.dto.RegisterRequest;
 import us.onnasoft.ayanami.models.User;
 import us.onnasoft.ayanami.service.UserService;
 import jakarta.validation.Valid;
@@ -25,12 +25,12 @@ public class UserController {
     }
 
     @PostMapping
-    public User createUser(@Valid @RequestBody UserDTO userDTO) {
+    public User createUser(@Valid @RequestBody RegisterRequest userDTO) {
         return userService.createUser(userDTO);
     }
 
     @PutMapping("/{id}")
-    public User updateUser(@PathVariable Long id, @Valid @RequestBody UserDTO userDTO) {
+    public User updateUser(@PathVariable Long id, @Valid @RequestBody RegisterRequest userDTO) {
         return userService.updateUser(id, userDTO);
     }
 
