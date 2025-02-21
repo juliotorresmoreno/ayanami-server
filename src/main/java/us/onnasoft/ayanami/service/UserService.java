@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import jakarta.validation.ConstraintViolationException;
 import us.onnasoft.ayanami.dto.RegisterRequest;
 import us.onnasoft.ayanami.models.User;
 import us.onnasoft.ayanami.models.User.Role;
@@ -30,36 +31,45 @@ public class UserService {
     }
 
     @Transactional
-    public User createUser(RegisterRequest userDTO) {
-        if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
+    public User createUser(RegisterRequest payload) {
+        if (userRepository.findByEmail(payload.getEmail()).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already in use");
         }
 
         User user = new User();
-        user.setName(userDTO.getName());
-        user.setUsername(userDTO.getUsername());
-        user.setEmail(userDTO.getEmail());
-        user.setPassword(userDTO.getPassword());
-        user.setRole(userDTO.getRole() != null ? userDTO.getRole() : Role.USER);
-        user.setActive(userDTO.getActive() != null ? userDTO.getActive() : true);
+        user.setName(payload.getName());
+        user.setUsername(payload.getUsername());
+        user.setEmail(payload.getEmail());
+        user.setPassword(payload.getPassword());
+        user.setRole(payload.getRole() != null ? payload.getRole() : Role.USER);
+        user.setActive(payload.getActive() != null ? payload.getActive() : true);
 
-        return userRepository.save(user);
+        try {
+            return userRepository.save(user);
+        } catch (ConstraintViolationException e) {
+            final String message = e.getConstraintViolations().stream()
+                    .map(cv -> cv.getMessage())
+                    .reduce("", (acc, cv) -> acc + cv + "\n");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create user");
+        }
     }
 
     @Transactional
-    public User updateUser(Long id, RegisterRequest userDTO) {
+    public User updateUser(Long id, RegisterRequest payload) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
-        user.setName(userDTO.getName());
-        user.setEmail(userDTO.getEmail());
+        user.setName(payload.getName());
+        user.setEmail(payload.getEmail());
 
-        if (userDTO.getPassword() != null && !userDTO.getPassword().isBlank()) {
-            user.setPassword(userDTO.getPassword());
+        if (payload.getPassword() != null && !payload.getPassword().isBlank()) {
+            user.setPassword(payload.getPassword());
         }
 
-        user.setRole(userDTO.getRole() != null ? userDTO.getRole() : user.getRole());
-        user.setActive(userDTO.getActive() != null ? userDTO.getActive() : user.getActive());
+        user.setRole(payload.getRole() != null ? payload.getRole() : user.getRole());
+        user.setActive(payload.getActive() != null ? payload.getActive() : user.getActive());
 
         return userRepository.save(user);
     }

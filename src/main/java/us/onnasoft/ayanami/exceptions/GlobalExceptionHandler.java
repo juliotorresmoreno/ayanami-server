@@ -1,4 +1,4 @@
-package us.onnasoft.ayanami.exception;
+package us.onnasoft.ayanami.exceptions;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
