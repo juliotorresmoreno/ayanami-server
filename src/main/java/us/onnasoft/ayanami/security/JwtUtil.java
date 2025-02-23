@@ -3,6 +3,8 @@ package us.onnasoft.ayanami.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import us.onnasoft.ayanami.config.JwtConfig;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,14 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private long expirationTime;
 
+    public JwtUtil() {
+    }
+
+    public JwtUtil(JwtConfig jwtConfig) {
+        this.secretKey = jwtConfig.getSecret();
+        this.expirationTime = jwtConfig.getExpiration();
+    }
+
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
     }
@@ -34,6 +44,10 @@ public class JwtUtil {
                 .expiration(expiration)
                 .signWith(getSigningKey(), Jwts.SIG.HS256)
                 .compact();
+    }
+
+    public Claims extractAllClaims(String token) {
+        return getClaims(token);
     }
 
     public String extractEmail(String token) {

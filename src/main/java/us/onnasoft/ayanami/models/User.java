@@ -1,12 +1,12 @@
 package us.onnasoft.ayanami.models;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.Date;
 
 @Entity
 @Table(name = "users")
@@ -47,6 +47,24 @@ public class User {
     @Column(nullable = false)
     private Boolean active = true;
 
+    // Nuevos campos
+    @Size(max = 500, message = "Bio must be at most 500 characters")
+    private String bio;
+
+    @Size(max = 100, message = "Location must be at most 100 characters")
+    private String location;
+
+    @Size(max = 200, message = "Website must be at most 200 characters")
+    @Pattern(regexp = "^(http|https)://.*", message = "Website must be a valid URL")
+    private String website;
+
+    @Past(message = "Birth date must be in the past")
+    @Temporal(TemporalType.DATE)
+    private Date birthDate;
+
+    @Enumerated(EnumType.STRING)
+    private Gender gender;
+
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public void setPassword(String rawPassword) {
@@ -64,5 +82,9 @@ public class User {
 
     public enum Role {
         USER, ADMIN, MODERATOR
+    }
+
+    public enum Gender {
+        MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY
     }
 }

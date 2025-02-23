@@ -78,65 +78,64 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpServletRequest httpRequest) {
-        logger.info("Login attempt for user: {}", request.getEmail());
+    public ResponseEntity<?> login(@RequestBody LoginRequest payload, HttpServletRequest request) {
+        logger.info("Login attempt for user: {}", payload.getEmail());
 
         try {
-            final Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+            final Optional<User> userOptional = userRepository.findByEmail(payload.getEmail());
 
-            if (userOptional.isEmpty() || !userOptional.get().isPasswordValid(request.getPassword())) {
-                logger.warn("Invalid login attempt for user: {}", request.getEmail());
+            if (userOptional.isEmpty() || !userOptional.get().isPasswordValid(payload.getPassword())) {
+                logger.warn("Invalid login attempt for user: {}", payload.getEmail());
                 final ApiErrorResponse errorResponse = new ApiErrorResponse(
                         LocalDateTime.now(),
                         401,
                         "Invalid email or password",
-                        "Invalid email or password",
-                        httpRequest.getRequestURI());
-                return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse.toString());
+                        request.getRequestURI());
+                return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
             }
 
             final String token = jwtUtil.generateToken(userOptional.get().getEmail());
-            logger.info("User logged in successfully: {}", request.getEmail());
+            logger.info("User logged in successfully: {}", payload.getEmail());
             return ResponseEntity.ok(new LoginResponse("Login successful", token));
         } catch (Exception e) {
-            logger.error("Error during login for user: {}", request.getEmail(), e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(httpRequest.getRequestURI(), e);
+            logger.error("Error during login for user: {}", payload.getEmail(), e);
+            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
             return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
         }
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request,
-            HttpServletRequest httpRequest) {
-        logger.info("Password reset requested for user: {}", request.getEmail());
+    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest payload,
+            HttpServletRequest request) {
+        logger.info("Password reset requested for user: {}", payload.getEmail());
 
         try {
-            final Optional<User> userOptional = userRepository.findByEmail(request.getEmail());
+            final Optional<User> userOptional = userRepository.findByEmail(payload.getEmail());
             if (userOptional.isEmpty()) {
-                logger.warn("Password reset request for non-existent user: {}", request.getEmail());
+                logger.warn("Password reset request for non-existent user: {}", payload.getEmail());
                 return ResponseEntity.ok("If the email exists, a password reset link has been sent.");
             }
 
             final String resetToken = jwtUtil.generateToken(userOptional.get().getEmail());
             final String resetLink = baseUrl + "/auth/reset-password?token=" + resetToken;
 
-            logger.info("Sending password reset link to: {}", request.getEmail());
+            logger.info("Sending password reset link to: {}", payload.getEmail());
             emailService.sendEmail(
-                    request.getEmail(),
+                payload.getEmail(),
                     "Password Reset",
                     "Click the link to reset your password: " + resetLink);
 
             return ResponseEntity.ok(
                     new ForgotPasswordResponse("If the email exists, a password reset link has been sent."));
         } catch (Exception e) {
-            logger.error("Error during password reset for user: {}", request.getEmail(), e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(httpRequest.getRequestURI(), e);
+            logger.error("Error during password reset for user: {}", payload.getEmail(), e);
+            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
             return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
         }
     }
 
     @GetMapping("/reset-password")
-    public ResponseEntity<?> showResetPasswordPage(HttpServletRequest httpRequest) throws IOException {
+    public ResponseEntity<?> showResetPasswordPage(HttpServletRequest request) throws IOException {
         logger.info("Loading reset password page");
 
         try {
@@ -145,28 +144,27 @@ public class AuthController {
             return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(content);
         } catch (IOException e) {
             logger.error("Error loading reset password page", e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(httpRequest.getRequestURI(), e);
+            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
             return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
         }
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetConfirm request, HttpServletRequest httpRequest) {
-        logger.info("Password reset attempt for token: {}", request.getToken());
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetConfirm payload, HttpServletRequest request) {
+        logger.info("Password reset attempt for token: {}", payload.getToken());
 
         try {
-            if (!jwtUtil.isTokenValid(request.getToken())) {
-                logger.warn("Invalid or expired token: {}", request.getToken());
+            if (!jwtUtil.isTokenValid(payload.getToken())) {
+                logger.warn("Invalid or expired token: {}", payload.getToken());
                 final ApiErrorResponse errorResponse = new ApiErrorResponse(
                         LocalDateTime.now(),
                         400,
                         "Invalid or expired token",
-                        "Invalid or expired token",
-                        httpRequest.getRequestURI());
+                        request.getRequestURI());
                 return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse.toString());
             }
 
-            final String email = jwtUtil.extractEmail(request.getToken());
+            final String email = jwtUtil.extractEmail(payload.getToken());
             final Optional<User> userOptional = userRepository.findByEmail(email);
 
             if (userOptional.isEmpty()) {
@@ -175,20 +173,19 @@ public class AuthController {
                         LocalDateTime.now(),
                         404,
                         "User not found",
-                        "User not found",
-                        httpRequest.getRequestURI());
+                        request.getRequestURI());
                 return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse.toString());
             }
 
             final User user = userOptional.get();
-            user.setPassword(request.getNewPassword());
+            user.setPassword(payload.getNewPassword());
             userRepository.save(user);
 
             logger.info("Password reset successful for user: {}", email);
             return ResponseEntity.ok("Password reset successful.");
         } catch (Exception e) {
-            logger.error("Error during password reset for token: {}", request.getToken(), e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(httpRequest.getRequestURI(), e);
+            logger.error("Error during password reset for token: {}", payload.getToken(), e);
+            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
             return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
         }
     }

@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 public class ApiErrorResponse {
     private LocalDateTime timestamp;
     private int status;
-    private String error;
     private String message;
     private String path;
 
@@ -23,14 +22,12 @@ public class ApiErrorResponse {
             final ResponseStatusException rse = (ResponseStatusException) e;
             this.timestamp = LocalDateTime.now();
             this.status = rse.getStatusCode().value();
-            this.error = rse.getReason();
             this.message = rse.getReason();
             this.path = path;
             return;
         }
         this.timestamp = LocalDateTime.now();
         this.status = HttpStatus.INTERNAL_SERVER_ERROR.value();
-        this.error = HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase();
         this.message = e.getMessage();
         this.path = path;
     }
