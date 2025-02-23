@@ -15,8 +15,12 @@ import java.util.Map;
 @RequestMapping("/contact")
 public class ContactController {
 
+    private final ContactService contactService;
+
     @Autowired
-    private ContactService contactService;
+    public ContactController(ContactService contactService) {
+        this.contactService = contactService;
+    }
 
     /**
      * Handles contact form submissions.

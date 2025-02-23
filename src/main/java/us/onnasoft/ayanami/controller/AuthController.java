@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import us.onnasoft.ayanami.dto.*;
 import us.onnasoft.ayanami.exceptions.ApiErrorResponse;
 import us.onnasoft.ayanami.models.User;
@@ -29,22 +30,25 @@ public class AuthController {
     @Value("${url_base}")
     private String baseUrl;
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final UserRepository userRepository;
+    private final JwtUtil jwtUtil;
+    private final EmailService emailService;
 
     @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private JwtUtil jwtUtil;
-
-    @Autowired
-    private EmailService emailService;
+    public AuthController(UserService userService, UserRepository userRepository, JwtUtil jwtUtil,
+            EmailService emailService) {
+        this.userService = userService;
+        this.userRepository = userRepository;
+        this.jwtUtil = jwtUtil;
+        this.emailService = emailService;
+    }
 
     private final Logger logger = LogManager.getLogger(AuthController.class);
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody RegisterRequest payload, HttpServletRequest request) {
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest payload,
+            HttpServletRequest request) {
         logger.info("Starting registration for user: {}", payload.getEmail());
 
         try {
@@ -72,13 +76,15 @@ public class AuthController {
             logger.info("User registered successfully: {}", user.getEmail());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
-            return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
+            if (e instanceof ApiErrorResponse rse) {
+                throw rse;
+            }
+            throw new ApiErrorResponse(request.getRequestURI(), e);
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest payload, HttpServletRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest payload, HttpServletRequest request) {
         logger.info("Login attempt for user: {}", payload.getEmail());
 
         try {
@@ -86,12 +92,11 @@ public class AuthController {
 
             if (userOptional.isEmpty() || !userOptional.get().isPasswordValid(payload.getPassword())) {
                 logger.warn("Invalid login attempt for user: {}", payload.getEmail());
-                final ApiErrorResponse errorResponse = new ApiErrorResponse(
+                throw new ApiErrorResponse(
                         LocalDateTime.now(),
                         401,
                         "Invalid email or password",
                         request.getRequestURI());
-                return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
             }
 
             final String token = jwtUtil.generateToken(userOptional.get().getEmail());
@@ -99,13 +104,15 @@ public class AuthController {
             return ResponseEntity.ok(new LoginResponse("Login successful", token));
         } catch (Exception e) {
             logger.error("Error during login for user: {}", payload.getEmail(), e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
-            return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
+            if (e instanceof ApiErrorResponse rse) {
+                throw rse;
+            }
+            throw new ApiErrorResponse(request.getRequestURI(), e);
         }
     }
 
     @PostMapping("/forgot-password")
-    public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest payload,
+    public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest payload,
             HttpServletRequest request) {
         logger.info("Password reset requested for user: {}", payload.getEmail());
 
@@ -113,7 +120,9 @@ public class AuthController {
             final Optional<User> userOptional = userRepository.findByEmail(payload.getEmail());
             if (userOptional.isEmpty()) {
                 logger.warn("Password reset request for non-existent user: {}", payload.getEmail());
-                return ResponseEntity.ok("If the email exists, a password reset link has been sent.");
+                return ResponseEntity
+                        .ok(new ForgotPasswordResponse(
+                                "If the email exists, a password reset link has been sent."));
             }
 
             final String resetToken = jwtUtil.generateToken(userOptional.get().getEmail());
@@ -121,7 +130,7 @@ public class AuthController {
 
             logger.info("Sending password reset link to: {}", payload.getEmail());
             emailService.sendEmail(
-                payload.getEmail(),
+                    payload.getEmail(),
                     "Password Reset",
                     "Click the link to reset your password: " + resetLink);
 
@@ -129,39 +138,43 @@ public class AuthController {
                     new ForgotPasswordResponse("If the email exists, a password reset link has been sent."));
         } catch (Exception e) {
             logger.error("Error during password reset for user: {}", payload.getEmail(), e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
-            return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
+            if (e instanceof ApiErrorResponse rse) {
+                throw rse;
+            }
+            throw new ApiErrorResponse(request.getRequestURI(), e);
         }
     }
 
     @GetMapping("/reset-password")
-    public ResponseEntity<?> showResetPasswordPage(HttpServletRequest request) throws IOException {
+    public ResponseEntity<String> showResetPasswordPage(HttpServletRequest request) throws IOException {
         logger.info("Loading reset password page");
 
         try {
             final ClassPathResource htmlFile = new ClassPathResource("static/reset-password.html");
             final String content = new String(htmlFile.getInputStream().readAllBytes());
             return ResponseEntity.ok().contentType(MediaType.TEXT_HTML).body(content);
-        } catch (IOException e) {
+        } catch (Exception e) {
             logger.error("Error loading reset password page", e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
-            return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
+            if (e instanceof ApiErrorResponse rse) {
+                throw rse;
+            }
+            throw new ApiErrorResponse(request.getRequestURI(), e);
         }
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetConfirm payload, HttpServletRequest request) {
+    public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody PasswordResetConfirm payload,
+            HttpServletRequest request) {
         logger.info("Password reset attempt for token: {}", payload.getToken());
 
         try {
             if (!jwtUtil.isTokenValid(payload.getToken())) {
                 logger.warn("Invalid or expired token: {}", payload.getToken());
-                final ApiErrorResponse errorResponse = new ApiErrorResponse(
+                throw new ApiErrorResponse(
                         LocalDateTime.now(),
                         400,
                         "Invalid or expired token",
                         request.getRequestURI());
-                return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse.toString());
             }
 
             final String email = jwtUtil.extractEmail(payload.getToken());
@@ -169,12 +182,11 @@ public class AuthController {
 
             if (userOptional.isEmpty()) {
                 logger.warn("User not found for password reset: {}", email);
-                final ApiErrorResponse errorResponse = new ApiErrorResponse(
+                throw new ApiErrorResponse(
                         LocalDateTime.now(),
                         404,
                         "User not found",
                         request.getRequestURI());
-                return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse.toString());
             }
 
             final User user = userOptional.get();
@@ -182,11 +194,13 @@ public class AuthController {
             userRepository.save(user);
 
             logger.info("Password reset successful for user: {}", email);
-            return ResponseEntity.ok("Password reset successful.");
+            return ResponseEntity.ok(new ResetPasswordResponse("Password reset successful."));
         } catch (Exception e) {
             logger.error("Error during password reset for token: {}", payload.getToken(), e);
-            final ApiErrorResponse errorResponse = new ApiErrorResponse(request.getRequestURI(), e);
-            return ResponseEntity.status(errorResponse.getStatus()).body(errorResponse);
+            if (e instanceof ApiErrorResponse rse) {
+                throw rse;
+            }
+            throw new ApiErrorResponse(request.getRequestURI(), e);
         }
     }
 }
