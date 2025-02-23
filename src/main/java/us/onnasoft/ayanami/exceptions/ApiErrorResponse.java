@@ -67,4 +67,8 @@ public class ApiErrorResponse extends RuntimeException {
     public synchronized Throwable fillInStackTrace() {
         return this;
     }
+
+    public Throwable getThrowable() {
+        return null;
+    }
 }

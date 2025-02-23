@@ -26,11 +26,11 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<Object> handleRuntimeException(RuntimeException ex) {
+    public ResponseEntity<Object> handleRuntimeException(RuntimeException ex, HttpServletRequest request) {
         if (ex instanceof ApiErrorResponse rse) {
             return ResponseEntity.status(rse.getStatus()).body(rse);
         }
-        final var apiErrorResponse = new ApiErrorResponse(ex.getMessage(), ex);
-        return ResponseEntity.status(apiErrorResponse.getStatus()).body(apiErrorResponse);
+        final var response = new ApiErrorResponse(request.getRequestURI(), ex);
+        return ResponseEntity.status(response.getStatus()).body(response);
     }
 }

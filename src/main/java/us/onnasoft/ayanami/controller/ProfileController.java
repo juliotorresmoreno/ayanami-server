@@ -1,20 +1,27 @@
 // us.onnasoft.ayanami.controller.ProfileController
 package us.onnasoft.ayanami.controller;
 
+import us.onnasoft.ayanami.dto.ProfileUpdateRequest;
 import us.onnasoft.ayanami.models.User;
 import us.onnasoft.ayanami.service.ProfileService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+
+import jakarta.validation.Valid;
+
 import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/profile")
 public class ProfileController {
+  private final ProfileService profileService;
 
   @Autowired
-  private ProfileService profileService;
+  public ProfileController(ProfileService profileService) {
+    this.profileService = profileService;
+  }
 
   /**
    * Obtiene el perfil del usuario autenticado.
@@ -23,12 +30,9 @@ public class ProfileController {
    */
   @GetMapping("")
   public ResponseEntity<Object> getUserProfile() {
-    System.out.println("GET /profile/");
-
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    String username = authentication.getName(); // Obtiene el nombre de usuario (email o username)
+    String username = authentication.getName();
 
-    // Busca el usuario en la base de datos
     User user = profileService.getUserProfileByUsername(username);
     if (user != null) {
       return ResponseEntity.ok(user);
@@ -44,13 +48,23 @@ public class ProfileController {
    * @param updatedUser Los datos actualizados del usuario.
    * @return El perfil actualizado.
    */
-  @PutMapping("/{userId}")
-  public ResponseEntity<User> updateUserProfile(@PathVariable Long userId, @RequestBody User updatedUser) {
-    try {
-      User user = profileService.updateUserProfile(userId, updatedUser);
-      return ResponseEntity.ok(user);
-    } catch (RuntimeException e) {
+  @PutMapping("")
+  public ResponseEntity<User> updateUserProfile(@Valid @RequestBody ProfileUpdateRequest payload) {
+    Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    String username = authentication.getName();
+
+    User user = profileService.getUserProfileByUsername(username);
+    if (user == null) {
       return ResponseEntity.notFound().build();
     }
+
+    user.setName(payload.getName());
+    user.setBio(payload.getBio());
+    user.setLocation(payload.getLocation());
+    user.setWebsite(payload.getWebsite());
+    user.setBirthDate(payload.getBirthDate());
+    user.setGender(payload.getGender());
+
+    return ResponseEntity.ok(profileService.updateUserProfile(user.getId(), user));
   }
 }

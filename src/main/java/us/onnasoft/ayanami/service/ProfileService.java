@@ -6,14 +6,19 @@ import us.onnasoft.ayanami.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 
 @Service
 public class ProfileService {
 
+    private final UserRepository userRepository;
+
     @Autowired
-    private UserRepository userRepository;
+    public ProfileService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     /**
      * Obtiene el perfil de un usuario por su ID.
@@ -47,14 +52,16 @@ public class ProfileService {
     public User updateUserProfile(Long userId, User updatedUser) {
         return userRepository.findById(userId).map(user -> {
             user.setName(updatedUser.getName());
-            user.setEmail(updatedUser.getEmail());
             user.setBio(updatedUser.getBio());
             user.setLocation(updatedUser.getLocation());
             user.setWebsite(updatedUser.getWebsite());
             user.setBirthDate(updatedUser.getBirthDate());
             user.setGender(updatedUser.getGender());
             return userRepository.save(user);
-        }).orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        }).orElseThrow(() -> new ResponseStatusException(
+                401,
+                "User not found with id: " + userId,
+                null));
     }
 
     /**
@@ -68,7 +75,7 @@ public class ProfileService {
         userRepository.findById(userId).ifPresentOrElse(
                 userRepository::delete,
                 () -> {
-                    throw new RuntimeException("User not found with id: " + userId);
+                    throw new ResponseStatusException(401, "User not found with id: " + userId, null);
                 });
     }
 }

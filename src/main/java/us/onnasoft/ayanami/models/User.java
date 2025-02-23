@@ -3,9 +3,9 @@ package us.onnasoft.ayanami.models;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
+import us.onnasoft.ayanami.models.enums.Gender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
 import java.util.Date;
 
 @Entity
@@ -82,9 +82,5 @@ public class User {
 
     public enum Role {
         USER, ADMIN, MODERATOR
-    }
-
-    public enum Gender {
-        MALE, FEMALE, OTHER, PREFER_NOT_TO_SAY
     }
 }
