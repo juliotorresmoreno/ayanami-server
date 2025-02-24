@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import us.onnasoft.ayanami.dto.*;
 import us.onnasoft.ayanami.exceptions.ApiErrorResponse;
+import us.onnasoft.ayanami.models.LoginAttempt;
 import us.onnasoft.ayanami.models.User;
 import us.onnasoft.ayanami.models.User.Role;
 import us.onnasoft.ayanami.repository.UserRepository;
@@ -23,6 +24,7 @@ import us.onnasoft.ayanami.service.LoginAttemptService;
 import us.onnasoft.ayanami.service.UserService;
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.logging.log4j.LogManager;
@@ -206,7 +208,7 @@ public class AuthController {
     }
 
     @GetMapping("/login-attempts")
-    public ResponseEntity<LoginAttemptsResponse> getLoginAttempts(HttpServletRequest request) {
+    public ResponseEntity<List<LoginAttempt>> getLoginAttempts(HttpServletRequest request) {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication.getPrincipal().toString().equals("anonymousUser")) {
@@ -222,9 +224,7 @@ public class AuthController {
 
         final User user = userOptional.get();
         final Long userId = user.getId();
-        final LoginAttemptsResponse response = new LoginAttemptsResponse();
-        response.setLoginAttempts(loginAttemptService.getLoginAttemptsByUserId(userId));
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(loginAttemptService.getLoginAttemptsByUserId(userId));
     }
 }
