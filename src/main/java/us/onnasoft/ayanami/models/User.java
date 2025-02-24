@@ -47,6 +47,9 @@ public class User {
     @Column(nullable = false)
     private Boolean active = true;
 
+    @Size(min = 10, max = 15, message = "Phone must be between 10 and 15 characters")
+    private String phone;
+
     // Nuevos campos
     @Size(max = 500, message = "Bio must be at most 500 characters")
     private String bio;

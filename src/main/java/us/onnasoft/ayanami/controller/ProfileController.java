@@ -8,10 +8,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import jakarta.validation.Valid;
-
 import org.springframework.security.core.Authentication;
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/profile")
@@ -59,6 +57,7 @@ public class ProfileController {
     }
 
     user.setName(payload.getName());
+    user.setPhone(payload.getPhone());
     user.setBio(payload.getBio());
     user.setLocation(payload.getLocation());
     user.setWebsite(payload.getWebsite());

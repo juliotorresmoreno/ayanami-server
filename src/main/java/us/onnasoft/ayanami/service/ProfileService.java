@@ -52,11 +52,13 @@ public class ProfileService {
     public User updateUserProfile(Long userId, User updatedUser) {
         return userRepository.findById(userId).map(user -> {
             user.setName(updatedUser.getName());
+            user.setPhone(updatedUser.getPhone());
             user.setBio(updatedUser.getBio());
             user.setLocation(updatedUser.getLocation());
             user.setWebsite(updatedUser.getWebsite());
             user.setBirthDate(updatedUser.getBirthDate());
             user.setGender(updatedUser.getGender());
+            
             return userRepository.save(user);
         }).orElseThrow(() -> new ResponseStatusException(
                 401,

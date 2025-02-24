@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -164,5 +166,30 @@ public class AuthController {
 
         logger.info("Password reset successful for user: {}", email);
         return ResponseEntity.ok(new ResetPasswordResponse("Password reset successful."));
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ChangePasswordResponse> changePassword(
+        @Valid @RequestBody ChangePasswordRequest payload, HttpServletRequest request
+    ) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getPrincipal().toString().equals("anonymousUser")) {
+            logger.warn("User not authenticated");
+            throw new ResponseStatusException(401, "User not authenticated", null);
+        }
+
+        final Optional<User> userOptional = userRepository.findByEmail(authentication.getName());
+        final String currentPassword = payload.getCurrentPassword();
+        final String newPassword = payload.getNewPassword();
+        if (userOptional.isEmpty() || !userOptional.get().isPasswordValid(currentPassword)) {
+            logger.warn("Invalid password change attempt for user: {}", authentication.getName());
+            throw new ResponseStatusException(401, "Invalid password", null);
+        }
+
+        final User user = userOptional.get();
+        userService.changePassword(user.getId(), newPassword);
+
+        return ResponseEntity.ok(new ChangePasswordResponse("Password changed successfully."));
     }
 }

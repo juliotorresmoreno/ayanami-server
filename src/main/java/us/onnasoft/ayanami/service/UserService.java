@@ -83,4 +83,13 @@ public class UserService {
         }
         userRepository.deleteById(id);
     }
+
+    @Transactional
+    public User changePassword(Long id, String password) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND_MESSAGE));
+
+        user.setPassword(password);
+        return userRepository.save(user);
+    }
 }

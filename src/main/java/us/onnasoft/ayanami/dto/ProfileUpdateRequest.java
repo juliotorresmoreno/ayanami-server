@@ -15,6 +15,9 @@ public class ProfileUpdateRequest {
     @Size(min = 3, max = 50, message = "Name must be between 3 and 50 characters")
     private String name;
 
+    @Size(min = 10, max = 15, message = "Phone must be between 10 and 15 characters")
+    private String phone;
+
     @Size(max = 500, message = "Bio must be at most 500 characters")
     private String bio;
 
