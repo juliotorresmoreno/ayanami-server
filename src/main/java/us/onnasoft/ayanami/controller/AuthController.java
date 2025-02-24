@@ -223,9 +223,6 @@ public class AuthController {
         final User user = userOptional.get();
         final Long userId = user.getId();
         final LoginAttemptsResponse response = new LoginAttemptsResponse();
-        
-        System.out.println(loginAttemptService.getLoginAttemptsByUserId(userId));
-
         response.setLoginAttempts(loginAttemptService.getLoginAttemptsByUserId(userId));
 
         return ResponseEntity.ok(response);

@@ -1,11 +1,14 @@
 package us.onnasoft.ayanami.models;
 
+import lombok.*;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.*;
 import us.onnasoft.ayanami.models.enums.Gender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Entity
@@ -50,7 +53,6 @@ public class User {
     @Size(min = 10, max = 15, message = "Phone must be between 10 and 15 characters")
     private String phone;
 
-    // Nuevos campos
     @Size(max = 500, message = "Bio must be at most 500 characters")
     private String bio;
 
@@ -68,6 +70,14 @@ public class User {
     @Enumerated(EnumType.STRING)
     private Gender gender;
 
+    @CreationTimestamp
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
+
     private static final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
     public void setPassword(String rawPassword) {
@@ -76,6 +86,7 @@ public class User {
 
     /**
      * Compara la contraseña en texto plano con la almacenada en la base de datos.
+     * 
      * @param rawPassword La contraseña ingresada por el usuario.
      * @return true si la contraseña coincide, false si no.
      */
