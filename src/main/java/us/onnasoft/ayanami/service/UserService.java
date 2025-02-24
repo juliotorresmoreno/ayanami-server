@@ -60,20 +60,29 @@ public class UserService {
 
     @Transactional
     public User updateUser(Long id, User payload) {
-        User user = userRepository.findById(id)
+        final User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND_MESSAGE));
 
-        user.setName(payload.getName());
-        user.setEmail(payload.getEmail());
+        try {
+            user.setName(payload.getName());
+            user.setEmail(payload.getEmail());
 
-        if (payload.getPassword() != null && !payload.getPassword().isBlank()) {
-            user.setPassword(payload.getPassword());
+            if (payload.getPassword() != null && !payload.getPassword().isBlank()) {
+                user.setPassword(payload.getPassword());
+            }
+
+            user.setRole(payload.getRole() != null ? payload.getRole() : user.getRole());
+            user.setActive(payload.getActive() != null ? payload.getActive() : user.getActive());
+
+            return userRepository.save(user);
+        } catch (ConstraintViolationException e) {
+            final String message = e.getConstraintViolations().stream()
+                    .map(cv -> cv.getMessage())
+                    .reduce("", (acc, cv) -> acc + cv + "\n");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to update user");
         }
-
-        user.setRole(payload.getRole() != null ? payload.getRole() : user.getRole());
-        user.setActive(payload.getActive() != null ? payload.getActive() : user.getActive());
-
-        return userRepository.save(user);
     }
 
     @Transactional
@@ -81,7 +90,11 @@ public class UserService {
         if (!userRepository.existsById(id)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND_MESSAGE);
         }
-        userRepository.deleteById(id);
+        try {
+            userRepository.deleteById(id);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to delete user");
+        }
     }
 
     @Transactional
@@ -89,7 +102,11 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, USER_NOT_FOUND_MESSAGE));
 
-        user.setPassword(password);
-        return userRepository.save(user);
+        try {
+            user.setPassword(password);
+            return userRepository.save(user);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to change password");
+        }
     }
 }

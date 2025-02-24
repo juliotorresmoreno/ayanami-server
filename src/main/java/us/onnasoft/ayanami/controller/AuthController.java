@@ -172,7 +172,7 @@ public class AuthController {
     public ResponseEntity<ChangePasswordResponse> changePassword(
         @Valid @RequestBody ChangePasswordRequest payload, HttpServletRequest request
     ) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication.getPrincipal().toString().equals("anonymousUser")) {
             logger.warn("User not authenticated");

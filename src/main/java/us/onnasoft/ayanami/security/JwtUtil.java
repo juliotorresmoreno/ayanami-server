@@ -4,9 +4,10 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import us.onnasoft.ayanami.config.JwtConfig;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
@@ -25,6 +26,7 @@ public class JwtUtil {
     public JwtUtil() {
     }
 
+    @Autowired
     public JwtUtil(JwtConfig jwtConfig) {
         this.secretKey = jwtConfig.getSecret();
         this.expirationTime = jwtConfig.getExpiration();
@@ -74,7 +76,7 @@ public class JwtUtil {
                     .parseSignedClaims(token)
                     .getPayload();
         } catch (Exception e) {
-            throw new RuntimeException("Error al analizar el token JWT", e);
+            throw new ResponseStatusException(500,"Error al analizar el token JWT", e);
         }
     }
 }
