@@ -19,6 +19,7 @@ import us.onnasoft.ayanami.models.User.Role;
 import us.onnasoft.ayanami.repository.UserRepository;
 import us.onnasoft.ayanami.security.JwtUtil;
 import us.onnasoft.ayanami.service.EmailService;
+import us.onnasoft.ayanami.service.LoginAttemptService;
 import us.onnasoft.ayanami.service.UserService;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -30,6 +31,7 @@ import org.apache.logging.log4j.Logger;
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+    private static final String USER_NOT_AUTHENTICATED = "User not authenticated";
 
     @Value("${url_base}")
     private String baseUrl;
@@ -38,14 +40,16 @@ public class AuthController {
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
     private final EmailService emailService;
+    private final LoginAttemptService loginAttemptService;
 
     @Autowired
     public AuthController(UserService userService, UserRepository userRepository, JwtUtil jwtUtil,
-            EmailService emailService) {
+            EmailService emailService, LoginAttemptService loginAttemptService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
         this.emailService = emailService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     private final Logger logger = LogManager.getLogger(AuthController.class);
@@ -92,14 +96,23 @@ public class AuthController {
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest payload, HttpServletRequest request) {
         logger.info("Login attempt for user: {}", payload.getEmail());
 
+        final String ipAddress = request.getRemoteAddr();
         final Optional<User> userOptional = userRepository.findByEmail(payload.getEmail());
 
-        if (userOptional.isEmpty() || !userOptional.get().isPasswordValid(payload.getPassword())) {
-            logger.warn("Invalid login attempt for user: {}", payload.getEmail());
+        if (userOptional.isEmpty()) {
             throw new ResponseStatusException(401, "Invalid email or password", null);
         }
 
-        final String token = jwtUtil.generateToken(userOptional.get().getEmail());
+        final User user = userOptional.get();
+        final Long userId = user.getId();
+        if (!user.isPasswordValid(payload.getPassword())) {
+            logger.warn("Invalid login attempt for user: {}", payload.getEmail());
+            loginAttemptService.recordLoginAttempt(userId, ipAddress, false);
+        }
+
+        loginAttemptService.recordLoginAttempt(userId, ipAddress, true);
+
+        final String token = jwtUtil.generateToken(user.getEmail());
         logger.info("User logged in successfully: {}", payload.getEmail());
         return ResponseEntity.ok(new LoginResponse("Login successful", token));
     }
@@ -170,13 +183,12 @@ public class AuthController {
 
     @PostMapping("/change-password")
     public ResponseEntity<ChangePasswordResponse> changePassword(
-        @Valid @RequestBody ChangePasswordRequest payload, HttpServletRequest request
-    ) {
+            @Valid @RequestBody ChangePasswordRequest payload, HttpServletRequest request) {
         final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication.getPrincipal().toString().equals("anonymousUser")) {
-            logger.warn("User not authenticated");
-            throw new ResponseStatusException(401, "User not authenticated", null);
+            logger.warn(USER_NOT_AUTHENTICATED);
+            throw new ResponseStatusException(401, USER_NOT_AUTHENTICATED, null);
         }
 
         final Optional<User> userOptional = userRepository.findByEmail(authentication.getName());
@@ -191,5 +203,28 @@ public class AuthController {
         userService.changePassword(user.getId(), newPassword);
 
         return ResponseEntity.ok(new ChangePasswordResponse("Password changed successfully."));
+    }
+
+    @GetMapping("/login-attempts")
+    public ResponseEntity<LoginAttemptsResponse> getLoginAttempts(HttpServletRequest request) {
+        final Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getPrincipal().toString().equals("anonymousUser")) {
+            logger.warn(USER_NOT_AUTHENTICATED);
+            throw new ResponseStatusException(401, USER_NOT_AUTHENTICATED, null);
+        }
+
+        final Optional<User> userOptional = userRepository.findByEmail(authentication.getName());
+        if (userOptional.isEmpty()) {
+            logger.warn("User not found: {}", authentication.getName());
+            throw new ResponseStatusException(404, "User not found", null);
+        }
+
+        final User user = userOptional.get();
+        final Long userId = user.getId();
+        final LoginAttemptsResponse response = new LoginAttemptsResponse();
+        response.setLoginAttempts(loginAttemptService.getLoginAttemptsByUserId(userId));
+
+        return ResponseEntity.ok(response);
     }
 }

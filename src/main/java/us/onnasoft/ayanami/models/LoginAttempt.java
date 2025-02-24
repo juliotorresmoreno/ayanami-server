@@ -1,9 +1,19 @@
 package us.onnasoft.ayanami.models;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
 import java.time.LocalDateTime;
 
 @Entity
+@Table(name = "login_attempts")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class LoginAttempt {
 
   @Id
@@ -21,54 +31,4 @@ public class LoginAttempt {
 
   @Column(nullable = false)
   private boolean success;
-
-  public LoginAttempt() {
-  }
-
-  public LoginAttempt(Long userId, LocalDateTime timestamp, String ipAddress, boolean success) {
-    this.userId = userId;
-    this.timestamp = timestamp;
-    this.ipAddress = ipAddress;
-    this.success = success;
-  }
-
-  public Long getId() {
-    return id;
-  }
-
-  public void setId(Long id) {
-    this.id = id;
-  }
-
-  public Long getUserId() {
-    return userId;
-  }
-
-  public void setUserId(Long userId) {
-    this.userId = userId;
-  }
-
-  public LocalDateTime getTimestamp() {
-    return timestamp;
-  }
-
-  public void setTimestamp(LocalDateTime timestamp) {
-    this.timestamp = timestamp;
-  }
-
-  public String getIpAddress() {
-    return ipAddress;
-  }
-
-  public void setIpAddress(String ipAddress) {
-    this.ipAddress = ipAddress;
-  }
-
-  public boolean isSuccess() {
-    return success;
-  }
-
-  public void setSuccess(boolean success) {
-    this.success = success;
-  }
 }

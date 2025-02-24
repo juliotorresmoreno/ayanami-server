@@ -18,7 +18,12 @@ public class LoginAttemptService {
   }
 
   public void recordLoginAttempt(Long userId, String ipAddress, boolean success) {
-    LoginAttempt loginAttempt = new LoginAttempt(userId, LocalDateTime.now(), ipAddress, success);
+    LoginAttempt loginAttempt = new LoginAttempt();
+    loginAttempt.setUserId(userId);
+    loginAttempt.setIpAddress(ipAddress);
+    loginAttempt.setSuccess(success);
+    loginAttempt.setTimestamp(LocalDateTime.now());
+    
     loginAttemptRepository.save(loginAttempt);
   }
 
